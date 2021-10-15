@@ -1,0 +1,304 @@
+---
+title: "Soft drink production"
+output:
+  html_document:
+    anchor_sections: true
+    highlight: pygments
+    css: [css/base.css, css/downlit.css]
+    md_extensions: -smart
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo=TRUE, warning=FALSE, message=FALSE,
+  fig.align="center", fig.width=9.5, dev="svglite",
+  class.source="sourceCode"
+)
+
+# Enable console highlighting, see `?fansi::set_knit_hooks`
+
+old.hooks <- fansi::set_knit_hooks(knitr::knit_hooks)
+
+styles <- c(
+  getOption('fansi.style'),
+  "PRE.fansi CODE {background-color: transparent;}",
+  "PRE.fansi-error {background-color: transparent;}",
+  "PRE.fansi-warning {background-color: transparent;}",
+  "PRE.fansi-message {background-color: transparent;}"
+)
+
+old.hooks <- c(
+  old.hooks,
+  fansi::set_knit_hooks(
+    knitr::knit_hooks,
+    which=c('warning', 'error', 'message'),
+    style=styles
+  )
+)
+
+options(crayon.enabled = TRUE)
+```
+
+## Techniques employed
+
+- Data wrangling:
+  - Filtering data
+  - Working with dates: months, quarters, years
+  - Grouping and summarising data
+  - Row-binding data
+
+- Data visualisation:
+  - Line plots, grouped line plots
+  - Modifying the legend position and appearance
+
+
+## About the data
+
+From 1950 to 1977, soft-drink production was reported on a quarterly basis.
+
+More information on this record can be found
+[here](https://open.canada.ca/data/en/dataset/15dac000-240f-494c-86b6-311d8f8012b9).
+
+The data and accompanying metadata can be downloaded together as a .zip file from
+[here](https://www150.statcan.gc.ca/n1/tbl/csv/16100100-eng.zip).
+
+From 1976 to 1995, soft-drink production was reported on a monthly basis.
+
+More information on this record can be found
+[here](https://open.canada.ca/data/en/dataset/de2e4ec3-dcb8-4dd1-aad8-3ccc1a61d633).
+
+The data and accompanying metadata can be downloaded together as a .zip file from
+[here](https://www150.statcan.gc.ca/n1/tbl/csv/16100099-eng.zip).
+
+
+## Packages
+
+```{r}
+library(tidyverse)
+library(lubridate)
+theme_set(theme_bw())
+```
+
+
+## Obtaining the data
+
+For these demos, I will be storing all data files in a folder called `data` with subfolders for
+each topic.
+
+```{r, eval=FALSE}
+if (!dir.exists("./data/drinks")) {
+  dir.create("./data/drinks", recursive=TRUE)
+}
+
+# Quarterly data from 1950 to 1977
+
+download.file(
+  "https://www150.statcan.gc.ca/n1/tbl/csv/16100100-eng.zip",
+  destfile = "./data/drinks/qdrinks.zip"
+)
+
+unzip(
+  "./data/drinks/qdrinks.zip",
+  exdir = "./data/drinks"
+)
+
+# Monthly data from 1976 to 1995
+
+download.file(
+  "https://www150.statcan.gc.ca/n1/tbl/csv/16100099-eng.zip",
+  destfile = "./data/drinks/mdrinks.zip"
+)
+
+unzip(
+  "./data/drinks/mdrinks.zip",
+  exdir = "./data/drinks"
+)
+```
+
+```{r}
+list.files("./data/drinks", pattern="csv")
+```
+
+
+## Reading in the quarterly data
+
+```{r}
+qdrinks <- read_csv("./data/drinks/16100100.csv")
+
+glimpse(qdrinks)
+```
+
+The variables of interest are:
+
+| Variable   | Description                         |
+|------------|-------------------------------------|
+| `REF_DATE` | Year and month of record            |
+| `VALUE`    | Amount produced in thousand gallons |
+
+As the dates are supplied as strings of format yyyy-mm, we can use `lubridate::ym()` to parse them
+into proper dates.
+
+```{r}
+quarterly <- qdrinks %>%
+  select(REF_DATE, VALUE) %>%
+  rename(date = REF_DATE, quarterly_value = VALUE) %>%
+  mutate(date = ym(date))
+
+quarterly
+```
+
+
+## Reading in the monthly data
+
+```{r}
+mdrinks <- read_csv("./data/drinks/16100099.csv")
+
+glimpse(mdrinks)
+```
+
+The variables of interest are:
+
+| Variable   | Description                         |
+|------------|-------------------------------------|
+| `REF_DATE` | Year and month of record            |
+| `VALUE`    | Amount produced in thousand gallons |
+
+The monthly data can be processed similar to the quarterly data.
+
+```{r}
+monthly <- mdrinks %>%
+  select(REF_DATE, VALUE) %>%
+  rename(date = REF_DATE, monthly_value = VALUE) %>%
+  mutate(date = ym(date))
+
+monthly
+```
+
+**We want to expand the quarterly production data by converting our monthly data into quarterly
+data, and appending it to the end of the original quarterly data. The final result should be a data
+set that ranges from 1950 to 1995 with production values being reported each quarter.**
+
+
+## Converting monthly data to quarterly data
+
+Starting from the `monthly` data that we have, we create a new variable called `qdate` to keep track
+of the quarter that each year-month combination belongs to. Grouping the data by the resulting
+quarters and summing over the monthly production values results in the desired quarterly production
+values. Finally, the quarters created under `qdate` are converted back to full dates in preparation
+for the row binding of the two quarterly data sets.
+
+```{r}
+quarterly2 <- monthly %>%
+  mutate(qdate = quarter(date, with_year=TRUE)) %>%
+  group_by(qdate) %>%
+  summarise(quarterly_value = sum(monthly_value)) %>%
+  mutate(date = yq(qdate)) %>%
+  select(date, quarterly_value)
+
+quarterly2
+```
+
+
+## Combining the two quarterly data sets
+
+Since there is an overlap in the dates between the quarterly and monthly data, we need to make sure
+that all quarters are only included once when row binding `quarterly` and `quarterly2`. Let's find
+the end date from the original quarterly data and keep only the observations from `quarterly2` that
+occur after this date.
+
+```{r}
+quarterly_end_date <- quarterly %>%
+  slice_max(date) %>%
+  pull(date)
+
+quarterly2 <- quarterly2 %>%
+  filter(date > quarterly_end_date)
+```
+
+```{r}
+full_quarterly <- bind_rows(quarterly, quarterly2)
+```
+
+### Checking our work
+
+```{r}
+full_quarterly %>%
+  slice_min(date)
+```
+
+```{r}
+full_quarterly %>%
+  slice_max(date)
+```
+
+Since the data ranges from 1950 to 1995 (46 years), we should have 46 * 4 = 184 rows in our data.
+
+```{r}
+full_quarterly %>%
+  nrow()
+```
+
+Looks good!
+
+
+## Quarterly soft-drink production
+
+In the original data, the production values were in the unit of thousands of gallons. Yet, the
+values that we have are still quite large. Let's scale all the production values by one thousand
+so that they will be in the units of million gallons.
+
+```{r}
+full_quarterly <- full_quarterly %>%
+  mutate(quarterly_value = quarterly_value / 1e3)
+```
+
+```{r}
+ggplot(full_quarterly, aes(x=date, y=quarterly_value))+
+  geom_line()+
+  labs(
+    x="Date", y="Amount produced (million gallons)",
+    title="Quarterly soft-drink production in Canada",
+    subtitle="1950 to 1995"
+  )
+```
+
+Another option is to colour the production values by quarter.
+
+```{r}
+full_quarterly %>%
+  mutate(Quarter = as_factor(quarter(date))) %>%
+  ggplot(aes(x=date, y=quarterly_value, colour=Quarter))+
+  geom_line(alpha=0.6)+
+  theme(legend.position="bottom")+
+  guides(colour = guide_legend(label.position="bottom"))+
+  labs(
+    x="Date", y="Amount produced (million gallons)",
+    title="Soft-drink production in Canada by quarter",
+    subtitle="1950 to 1995"
+  )
+```
+
+
+## Annual soft-drink production
+
+```{r}
+full_quarterly %>%
+  mutate(Year = year(date)) %>%
+  group_by(Year) %>%
+  summarise(annual_value = sum(quarterly_value)) %>%
+  ggplot(aes(x=Year, y=annual_value))+
+  geom_line()+
+  labs(
+    x="Date", y="Amount produced (million gallons)",
+    title="Annual soft-drink production in Canada",
+    subtitle="1950 to 1995"
+  )
+```
+
+---
+
+#### Notes
+
+In each usage of `group_by()` followed by `summarise()`, we never called `ungroup()`. This is
+because `summarise()` automatically drops one grouping level after completion and in each usage, we
+only grouped by a single variable. As such, after summarising, the data is fully ungrouped.
