@@ -1,0 +1,46 @@
+---
+title: "&#x1F341;&#x1F4CA; Working with Canadian open data"
+output:
+  html_document:
+    css: ../css/base.css
+    includes:
+      in_header: header.html
+    md_extensions: -smart
+---
+
+***
+
+[Production and sales of greenhouse flowers and plants](./plant-sales.html)
+
+Techniques employed:
+
+- Data wrangling:
+  - Filtering data
+  - Reordering factor levels by the values of a secondary variable
+
+- Data visualisation:
+  - Line plots
+  - Highlighting levels of interest
+  - Bar plots; ordered bar plots
+
+- String operations:
+  - Regular expressions
+  - Case conversion
+  
+***
+
+[Soft-drink production](./soft-drink-production.html)
+
+Techniques employed:
+
+- Data wrangling:
+  - Filtering data
+  - Working with dates: months, quarters, years
+  - Grouping and summarising data
+  
+- Data visualisation:
+  - Line plots, grouped line plots
+  - Modifying the legend position and appearance
+
+***
+
