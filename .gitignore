@@ -37,3 +37,10 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# R Markdown
+## Ignore .html files in root directory
+/*.html
+
+# Data files
+/data/
