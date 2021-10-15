@@ -1,0 +1,37 @@
+code a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: #ccc;
+}
+
+/* https://github.com/rstudio/distill/blob/master/inst/rmarkdown/templates/distill_article/resources/a11y.theme
++ https://gist.github.com/hadley/f53b6e92df20994fdabe6562d284728a */
+code span.ot {color:#007faa}
+code span.at {color:#7d9029}
+code span.ss {color:#bb6688}
+code span.an {color:#545454;}
+code span.fu {color:#4254A7}
+code span.st {color:#008000}
+code span.cf {color:#007faa;}
+code span.op {color:#696969}
+code span.er {color:#ff0000;}
+code span.bn {color:#a1024a}
+code span.al {color:#ff0000;}
+code span.va {color:#19177c}
+code span.bu {}
+code span.ex {}
+code span.pp {color:#bc7a00}
+code span.in {color:#545454;}
+code span.vs {color:#008000}
+code span.wa {color:#545454; font-style: italic}
+code span.do {color:#ba2121; font-style: italic}
+code span.im {}
+code span.ch {color:#008000}
+code span.dt {color:#aa5d00}
+code span.fl {color:#a1024a}
+code span.co {color:#545454}
+code span.cv {color:#545454; font-style: italic}
+code span.cn {color:#d91e18}
+code span.sc {color:#008000}
+code span.dv {color:#a1024a}
+code span.kw {color:#007faa;}
