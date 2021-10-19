@@ -262,24 +262,30 @@ ggplot(full_quarterly, aes(x=date, y=quarterly_value))+
   )
 ```
 
-Another option is to colour the production values by quarter.
+## Annual soft-drink production
+
+An alternative to the previous plot is to colour the production values by quarter. In doing so,
+the x-axis should be the year rather than the full date so that all the quarters of a given year
+line up.
 
 ```{r}
 full_quarterly %>%
-  mutate(Quarter = as_factor(quarter(date))) %>%
-  ggplot(aes(x=date, y=quarterly_value, colour=Quarter))+
+  mutate(
+    Quarter = as_factor(quarter(date)),
+    Year = year(date)
+  ) %>%
+  ggplot(aes(x=Year, y=quarterly_value, colour=Quarter))+
   geom_line(alpha=0.6)+
   theme(legend.position="bottom")+
   guides(colour = guide_legend(label.position="bottom"))+
   labs(
     x="Date", y="Amount produced (million gallons)",
-    title="Soft-drink production in Canada by quarter",
+    title="Annual soft-drink production in Canada by quarter",
     subtitle="1950 to 1995"
   )
 ```
 
-
-## Annual soft-drink production
+Finally, we can also look at the annual production without regard to the quarterly values.
 
 ```{r}
 full_quarterly %>%
