@@ -279,7 +279,7 @@ full_quarterly %>%
   theme(legend.position="bottom")+
   guides(colour = guide_legend(label.position="bottom"))+
   labs(
-    x="Date", y="Amount produced (million gallons)",
+    x="Year", y="Amount produced (million gallons)",
     title="Annual soft-drink production in Canada by quarter",
     subtitle="1950 to 1995"
   )
@@ -295,7 +295,7 @@ full_quarterly %>%
   ggplot(aes(x=Year, y=annual_value))+
   geom_line()+
   labs(
-    x="Date", y="Amount produced (million gallons)",
+    x="Year", y="Amount produced (million gallons)",
     title="Annual soft-drink production in Canada",
     subtitle="1950 to 1995"
   )
