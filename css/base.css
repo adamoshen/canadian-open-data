@@ -41,7 +41,11 @@ pre {
   border-radius: 0.4em;
 }
 
-code, pre {
+pre, code {
   font-family: var(--code-font-family), var(--code-font-family-fallback);
   font-size: var(--code-font-size);
+}
+
+pre code {
+  white-space: pre;
 }
