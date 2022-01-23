@@ -46,6 +46,8 @@ Techniques employed:
 
 [Grain export](./grain-export.html)
 
+Techniques employed:
+
 - Data wrangling:
   - Filtering data
   - Working with dates: months, years
