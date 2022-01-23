@@ -1,0 +1,433 @@
+---
+title: "Grain export"
+output:
+  html_document:
+    anchor_sections: true
+    highlight: pygments
+    css: [css/base.css, css/downlit.css]
+    md_extensions: -smart
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo=TRUE, warning=FALSE, message=FALSE,
+  fig.align="center", fig.width=9.5, dev="svglite",
+  class.source="sourceCode"
+)
+
+# Enable console highlighting, see `?fansi::set_knit_hooks`
+
+old.hooks <- fansi::set_knit_hooks(knitr::knit_hooks)
+
+styles <- c(
+  getOption('fansi.style'),
+  "PRE.fansi CODE {background-color: transparent;}",
+  "PRE.fansi-error {background-color: transparent;}",
+  "PRE.fansi-warning {background-color: transparent;}",
+  "PRE.fansi-message {background-color: transparent;}"
+)
+
+old.hooks <- c(
+  old.hooks,
+  fansi::set_knit_hooks(
+    knitr::knit_hooks,
+    which=c('warning', 'error', 'message'),
+    style=styles
+  )
+)
+
+options(crayon.enabled = TRUE)
+```
+
+## Techniques employed
+
+- Data wrangling:
+  - Filtering data
+  - Working with dates: months, years
+  - Anti-joining data
+  - Grouping and summarising data
+  - Reordering factor levels by the values of a function of a secondary variable
+
+- Data visualisation:
+  - Line plots
+  - Facetting by a secondary variable
+  - Highlighting levels of interest within a facet
+
+- String operations:
+  - Case insensitive string matching
+  - Partial string matching
+  - Removing a substring
+
+
+## About the data
+
+The export of Canadian grains has been collected monthly between 1922 to 2018. This data set
+includes information on the final destination as well as the type of grain being exported (e.g.
+wheat, oats, barley, etc.).
+
+More information on this record can be found
+[here](https://open.canada.ca/data/en/dataset/33a5e534-b62a-45b7-b36c-ddc16d53f6a0).
+
+The data and accompanying metadata can be downloaded together as a .zip file from
+[here](https://www150.statcan.gc.ca/n1/tbl/csv/32100008-eng.zip).
+
+
+## Packages
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(gghighlight)
+theme_set(theme_bw())
+```
+
+
+## Obtaining the data
+
+For these demos, I will be storing all data files in a folder called `data` with subfolders for
+each topic.
+
+```{r, eval=FALSE}
+if (!dir.exists("./data/grains")) {
+  dir.create("./data/grains", recursive=TRUE)
+}
+
+download.file(
+  "https://www150.statcan.gc.ca/n1/tbl/csv/32100008-eng.zip",
+  destfile = "./data/grains/grains.zip"
+)
+
+unzip(
+  "./data/grains/grains.zip",
+  exdir = "./data/grains"
+)
+```
+
+```{r}
+list.files("./data/grains", pattern="csv")
+```
+
+
+## Reading in the data
+
+```{r}
+grains <- read_csv("./data/grains/32100008.csv")
+
+glimpse(grains)
+```
+
+The variables of interest are:
+
+| Variable             | Description                            |
+|----------------------|----------------------------------------|
+| `REF_DATE`           | Year and month of record               |
+| `Commodity`          | Type of grains exported                |
+| `VALUE`              | Amount of grains exported in tonnes    |
+| `Destinations`       | Destination where grains were exported |
+
+```{r}
+grains <- grains %>%
+  select(REF_DATE, Commodity, VALUE, Destinations) %>%
+  rename(
+    date = REF_DATE,
+    type = Commodity,
+    value = VALUE,
+    destination = Destinations
+  )
+```
+
+## Dividing the data
+
+From calling `glimpse()` it is clear that a portion of the data contains summaries.
+
+```{r}
+grains %>%
+  distinct(destination) %>%
+  pull(destination) %>%
+  head(n=15)
+```
+
+Let's divide the data into two chunks: one that contains the summaries, and one without the
+summaries. We can search for all summaries by looking for values of `destination` that contain the
+term "total" (case-insensitive search). We can then isolate the remaining data by anti-joining
+the original data set with the summaries, which will return all data that did not appear in the
+summary data. Finally, we can drop any rows that contain missing values.
+
+```{r}
+grains_totals <- grains %>%
+  filter(str_detect(destination, pattern="(?i)total")) %>%
+  drop_na()
+
+grains <- grains %>%
+  anti_join(grains_totals, by="destination") %>%
+  drop_na()
+```
+
+
+## Making proper dates
+
+We can make proper dates of the `date` column by using `lubridate::ym()`. Let's also create a new
+variable to keep track of the year of observations and move the date-related columns together.
+
+```{r}
+grains_totals <- grains_totals %>%
+  mutate(
+    date = ym(date),
+    Year = year(date)
+  ) %>%
+  select(date, Year, type, value, destination)
+
+grains <- grains %>%
+  mutate(
+    date = ym(date),
+    Year = year(date)
+  ) %>%
+  select(date, Year, type, value, destination)
+```
+
+
+## Creating annual summaries
+
+```{r}
+grains_totals %>%
+  group_by(destination) %>%
+  slice_min(date) %>%
+  ungroup() %>%
+  distinct(date)
+
+grains_totals %>%
+  group_by(destination) %>%
+  slice_max(date) %>%
+  ungroup() %>%
+  distinct(date)
+```
+
+It can be seen that the range of the dates in the data set is quite large. Since the data is also
+occurring monthly, any visualisations that use the raw dates will appear too busy. Therefore, for
+the following examples, let's only focus on the annual values. Of course, further analysis could be
+performed at the monthly level or between a smaller range of dates.
+
+```{r}
+grains_totals_annual <- grains_totals %>%
+  group_by(destination, type, Year) %>%
+  summarise(value = sum(value), .groups="drop")
+
+grains_annual <- grains %>%
+  group_by(destination, type, Year) %>%
+  summarise(value = sum(value), .groups="drop")
+```
+
+
+## Visualising total annual export to various regions, by grain type
+
+Let's first make another partition for total annual export to all destinations. Instead of
+filtering on the condition of:
+
+```{r, eval=FALSE}
+destination == "Total exports, all destinations"
+```
+
+we can use `str_detect()` to perform partial string matching and do a bit less typing.
+
+```{r}
+grains_totals_annual_all <- grains_totals_annual %>%
+  filter(str_detect(destination, "all destinations"))
+```
+
+Plotting the data as is:
+
+```{r}
+ggplot(grains_totals_annual_all, aes(x=Year, y=value, colour=type))+
+  geom_line(alpha=0.6)
+```
+
+
+### Improving the plot
+
+- It is unclear what the y-axis is measuring
+- Y-axis is in scientific notation which requires the reader to do math
+- It may be better to facet by grain type, which will increase the amount of available plotting
+space by getting rid of the legend
+- It may also be nice to facet by grain type, while keeping all other grain types greyed out in each
+facet as a reference
+- The facetted plot can be made more convenient to read if the facetted grain types were ordered
+by their respective all-time maximums
+
+
+#### Avoiding scientific notation on the y-axis
+
+To avoid scientific notation on the y-axis, we can scale the values by one million. Thus, the new
+y-values will represent the amount exported in millions of tonnes.
+
+```{r}
+grains_totals_annual_all <- grains_totals_annual_all %>%
+  mutate(value = value / 1e6)
+```
+
+
+#### Ordering the grain types by their all-time maximums
+
+The `type` column is the variable whose values are to be reordered. These values will be reordered
+by the maximum value of each grain type, in descending order.
+
+```{r}
+grains_totals_annual_all <- grains_totals_annual_all %>%
+  mutate(type = fct_reorder(type, value, .fun=max, .desc=TRUE))
+```
+
+
+#### Building the final plot
+
+```{r, fig.height=9}
+ggplot(grains_totals_annual_all, aes(x=Year, y=value, colour=type))+
+  geom_line(show.legend=FALSE)+
+  gghighlight(use_direct_label=FALSE)+
+  facet_wrap(~type)+
+  labs(
+    y="Amount exported (million tonnes)",
+    title="Annual grain amounts exported to all destinations, by grain type",
+    subtitle="1922 to 2018 (where data is available)"
+  )
+```
+
+
+#### Additional plots
+
+```{r}
+grains_totals_annual %>%
+  distinct(destination)
+```
+
+The above plotting procedure can be repeated for the remaining destination totals, as desired.
+
+
+## Visualising total annual wheat export (excluding durum), by region
+
+The plotting procedure is similar to the previous plot, only now, we shall filter the data for
+grain type `"Wheat, excluding durum"` and facet by the destination (excluding
+`"Total exports, all destinations"`). In addition, we should also remove the word `"Total"` from
+the destination names that we will facet upon.
+
+
+#### Filtering the data
+
+Here, we wish to include only export data for grains of type `"Wheat, excluding durum"` and
+destinations other than `"Total exports, all destinations"`, since the total exports to all
+destinations was already seen in the previous plot.
+
+```{r}
+total_annual_wheat_export <- grains_totals_annual %>%
+  filter(str_detect(type, "Wheat, excluding")) %>%
+  filter(str_detect(destination, "all destinations", negate=TRUE))
+```
+
+
+#### Avoiding scientific notation on the y-axis
+
+To avoid scientific notation on the y-axis, we can scale the values by one million. Thus, the new
+y-values will represent the amount exported in millions of tonnes.
+
+```{r}
+total_annual_wheat_export <- total_annual_wheat_export %>%
+  mutate(value = value / 1e6)
+```
+
+
+#### Adjusting the destination labels
+
+The word `"Total"` (and the space that comes after it), are to be removed from the destination
+labels.
+
+```{r}
+total_annual_wheat_export <- total_annual_wheat_export %>%
+  mutate(destination = str_remove(destination, pattern="Total "))
+```
+
+
+#### Ordering the destinations by their all-time maximums
+
+The `destination` column is the variable whose values are to be reordered. These values will be
+reordered by the maximum value of wheat (excluding durum) exported, in descending order.
+
+```{r}
+total_annual_wheat_export <- total_annual_wheat_export %>%
+  mutate(destination = fct_reorder(destination, value, .fun=max, .desc=TRUE))
+```
+
+
+#### Building the plot
+
+```{r, fig.height=9}
+ggplot(total_annual_wheat_export, aes(x=Year, y=value, colour=destination))+
+  geom_line(show.legend=FALSE)+
+  gghighlight(use_direct_label=FALSE)+
+  facet_wrap(~destination)+
+  labs(
+    y="Amount exported (million tonnes)",
+    title="Annual amounts of wheat exported, by destination",
+    subtitle="1971 to 2018 (where data is available)"
+  )
+```
+
+
+#### Additional plots
+
+```{r}
+grains_totals_annual %>%
+  distinct(type)
+```
+
+The above plotting procedure can be repeated for the remaining grain types, as desired.
+
+
+## Visualising total annual export to the United States, by grain type
+
+```{r}
+grains_annual %>%
+  filter(str_detect(destination, pattern="United States")) %>%
+  distinct(destination)
+```
+
+For the following, let us only consider the United States mainland (which I assume includes Alaska)
+and extract the pertinent data.
+
+```{r}
+grains_annual_export_US <- grains_annual %>%
+  filter(destination == "United States")
+```
+
+```{r}
+ggplot(grains_annual_export_US, aes(x=Year, y=value, colour=type))+
+  geom_line(alpha=0.6)
+```
+
+
+### Data preparation
+
+The data preparation procedure is identical to the previous plots. We will need to:
+
+- Scale the values on the y-axis to avoid scientific notation
+- Reorder the grain types by their all-time maximums, in descending order
+
+```{r}
+grains_annual_export_US <- grains_annual_export_US %>%
+  mutate(
+    value = value / 1e6,
+    type = fct_reorder(type, value, .fun=max, .desc=TRUE)
+  )
+```
+
+
+### Building the plot
+
+```{r, fig.height=9}
+ggplot(grains_annual_export_US, aes(x=Year, y=value, colour=type))+
+  geom_line(show.legend=FALSE)+
+  gghighlight(use_direct_label=FALSE)+
+  facet_wrap(~type)+
+  labs(
+    y="Amount exported (million tonnes)",
+    title="Annual grain amounts exported to the United States, by grain type",
+    subtitle="1966 to 2018 (where data is available)"
+  )
+```
