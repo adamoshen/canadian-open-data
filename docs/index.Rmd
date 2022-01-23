@@ -44,3 +44,23 @@ Techniques employed:
 
 ***
 
+[Grain export](./grain-export.html)
+
+- Data wrangling:
+  - Filtering data
+  - Working with dates: months, years
+  - Anti-joining data
+  - Grouping and summarising data
+  - Reordering factor levels by the values of a function of a secondary variable
+
+- Data visualisation:
+  - Line plots
+  - Facetting by a secondary variable
+  - Highlighting levels of interest within a facet
+
+- String operations:
+  - Case insensitive string matching
+  - Partial string matching
+  - Removing a substring
+
+***
