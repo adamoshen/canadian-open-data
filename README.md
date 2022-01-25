@@ -6,7 +6,7 @@ A fork of [iamdavecampbell/data-set-acquisition](https://github.com/iamdavecampb
 
 ---
 
-The rendered files can be viewed [here](https://adamoshen.github.io/data-set-acquisition/).
+The rendered files can be viewed [here](https://adamoshen.github.io/canadian-open-data/).
 
 The RMarkdown files are first knitted to html, then passed to the `downlit`
 highlighter in `R/downlit_html_path2.R` for accessible syntax highlighting and
