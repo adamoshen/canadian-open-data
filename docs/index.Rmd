@@ -8,7 +8,7 @@ output:
     md_extensions: -smart
 ---
 
-***
+---
 
 [Production and sales of greenhouse flowers and plants](./plant-sales.html)
 
@@ -27,7 +27,7 @@ Techniques employed:
   - Regular expressions
   - Case conversion
   
-***
+---
 
 [Soft-drink production](./soft-drink-production.html)
 
@@ -42,7 +42,7 @@ Techniques employed:
   - Line plots, grouped line plots
   - Modifying the legend position and appearance
 
-***
+---
 
 [Grain export](./grain-export.html)
 
@@ -65,4 +65,4 @@ Techniques employed:
   - Partial string matching
   - Removing a substring
 
-***
+---
