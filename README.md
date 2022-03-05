@@ -8,9 +8,10 @@ A fork of [iamdavecampbell/data-set-acquisition](https://github.com/iamdavecampb
 
 The rendered files can be viewed [here](https://adamoshen.github.io/canadian-open-data/).
 
-The RMarkdown files are first knitted to html, then passed to the `downlit`
+~~The RMarkdown files are first knitted to html, then passed to the `downlit`
 highlighter in `R/downlit_html_path2.R` for accessible syntax highlighting and
-linking of functions to their respective documentations.
+linking of functions to their respective documentations.~~ (*Don't need this
+anymore with the release of rmarkdown 2.12.*)
 
 The packages required to knit the included RMarkdown files include:
 
@@ -19,10 +20,11 @@ The packages required to knit the included RMarkdown files include:
 - `svglite`
 - any other packages specified in the individual files
 
-The packages required to run `R/downlit_html_path2.R` include:
+(*Don't need this anymore with the release of rmarkdown 2.12.*) ~~The packages
+required to run `R/downlit_html_path2.R` include:~~
 
-- `downlit`
-- `withr`
+- ~~`downlit`~~
+- ~~`withr`~~
 
 To reduce knit time, code chunks for downloading and unzipping data currently
 have `eval` set to `FALSE`. Before knitting the RMarkdown files, you should
